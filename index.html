@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<script>
+    let socket = new WebSocket("ws://localhost:8080/ws?name=boi&room=1336")
+    console.log("attempting to connect")
+    socket.onopen = () => {
+        let msg = {"User": "boi", "Text": "Hi from the boi1"}
+        console.log("successfully connected")
+        console.log("Sending: ", JSON.stringify(msg))
+        socket.send(JSON.stringify(msg))
+    }
+    socket.onmessage = (event) =>{
+        console.log("socket message ", event.data)
+    }
+    socket.onclose = (event) => {
+        console.log("socket closed ", event)
+    }
+    socket.onerror = (error) => {
+        console.log("socket error" + error)
+    }
+</script>
+
+</body>
+</html>
