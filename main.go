@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
@@ -11,8 +10,8 @@ import (
 var rooms = make(map[string]*Room)
 
 type ChatMessage struct {
-	User string
-	Text string
+	User string `json:"user"`
+	Text string `json:"text"`
 }
 type User struct {
 	Conn *websocket.Conn
@@ -20,14 +19,8 @@ type User struct {
 }
 
 func (user *User) SendMessage(chatMessage *ChatMessage) error {
-	chatMessageBytes, err := json.Marshal(chatMessage)
-	if err != nil {
-		log.Println(err)
-		//json parse error not connection error, forgetttta bout et
-		return nil
-	}
-	log.Println(user.Name, "Sending message:", *chatMessage)
-	if err := user.Conn.WriteJSON(string(chatMessageBytes)); err != nil {
+	log.Println(user.Name, "Sending message:", chatMessage)
+	if err := user.Conn.WriteJSON(chatMessage); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -35,7 +28,6 @@ func (user *User) SendMessage(chatMessage *ChatMessage) error {
 }
 func (user *User) ReceiveMessage() (ChatMessage, error) {
 	cm := ChatMessage{}
-	//add proper error handing
 	if err := user.Conn.ReadJSON(&cm); err != nil {
 		log.Println(user.Name, "has error:", err)
 		return cm, err
@@ -64,6 +56,11 @@ func (room *Room) Broadcast() {
 	}()
 }
 func (room *Room) AddUser(user *User) {
+	userClose := func(code int, text string) error {
+		room.RemoveUser(user)
+		return nil
+	}
+	user.Conn.SetCloseHandler(userClose)
 	room.Users = append(room.Users, user)
 	go func() {
 		for {
@@ -79,6 +76,7 @@ func (room *Room) AddUser(user *User) {
 	}()
 }
 func (room *Room) RemoveUser(user *User) {
+	log.Println("Removing user ", user)
 	for i, userVal := range room.Users {
 		if userVal == user {
 			room.Users = append(room.Users[:i], room.Users[i+1:]...)
@@ -93,14 +91,16 @@ var upgrader = websocket.Upgrader{
 }
 
 func homepage(w http.ResponseWriter, r *http.Request) {
+	log.Println(r)
 	fmt.Fprint(w, "Home page")
 }
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
+	log.Println(r)
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
 	roomParam := r.URL.Query().Get("room")
-	nameParam := r.URL.Query().Get("name")
+	nameParam := r.URL.Query().Get("user")
 	log.Println("New Connection request: room:", roomParam, "name", nameParam)
 	if len(roomParam) == 0 || len(nameParam) == 0 {
 		w.WriteHeader(400)
