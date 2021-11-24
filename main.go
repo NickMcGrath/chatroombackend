@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"os"
 )
 
 var rooms = make(map[string]*Room)
@@ -131,9 +133,32 @@ func setUpRoutes() {
 	http.HandleFunc("/", homepage)
 	http.HandleFunc("/ws", wsEndpoint)
 }
+func cli() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println(`Enter "stats" to view program statistics`)
+	for {
+		text, _ := reader.ReadString('\n')
+		//remove \n at end of string
+		text = text[:len(text)-1]
+		switch text {
+		case "q":
+			os.Exit(0)
+		case "stats":
+			for k, v := range rooms {
+				fmt.Println("room:", k)
+				for _, u := range v.Users {
+					fmt.Println("\t", u.Name)
+				}
+			}
+		default:
+			fmt.Println("Invalid input")
+		}
+	}
+}
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("Go WebSockets")
+	log.Println("Go WebSockets!")
 	setUpRoutes()
+	go cli()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
